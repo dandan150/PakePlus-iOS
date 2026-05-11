@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杨氏模量实验 3D 交互教学演示</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f4f7f6; color: #333; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* ===== 左侧控制面板 ===== */
+        #ui {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.92);
+            padding: 22px 25px 18px;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+            border: 1px solid #e8e8e8;
+            backdrop-filter: blur(6px);
+            z-index: 10;
+            width: 240px;
+        }
+        #ui h3 {
+            margin: 0 0 14px 0;
+            color: #1a2744;
+            font-size: 1.15rem;
+            letter-spacing: 0.3px;
+        }
+        #ui h3 small {
+            font-weight: normal; font-size: 0.8rem; color: #7f8c9b;
+        }
+        #ui label {
+            font-size: 14px; font-weight: 500; display: block; margin-bottom: 6px;
+        }
+        #ui label span {
+            font-weight: 700; color: #2563eb; font-size: 17px;
+        }
+        #ui input[type=range] {
+            width: 100%; cursor: pointer; accent-color: #2563eb;
+            height: 6px; margin-bottom: 4px;
+        }
+        #ui .hint {
+            font-size: 12.5px; color: #7a7f8a; margin-top: 12px; line-height: 1.7;
+        }
+        #ui .btn-row {
+            display: flex; gap: 8px; margin-top: 12px;
+        }
+        #ui .btn-row button {
+            flex: 1; padding: 8px 0; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; background: #eef1f6; color: #3b4a5a;
+        }
+        #ui .btn-row button:hover { background: #e2e6ed; }
+        #ui .btn-row button.active {
+            background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+        }
+        #ui .btn-row button.active:hover { background: #1d4ed8; }
+
+        /* ===== 右侧数据面板 ===== */
+        #dataPanel {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.92);
+            padding: 16px 20px; border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+            border: 1px solid #e8e8e8;
+            backdrop-filter: blur(6px);
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 13.5px;
+            min-width: 230px;
+            z-index: 10;
+            line-height: 1.8;
+        }
+        #dataPanel .title {
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 700; font-size: 15px; color: #1a2744;
+            margin-bottom: 10px; padding-bottom: 8px;
+            border-bottom: 2px solid #eef1f6;
+            display: flex; align-items: center; gap: 6px;
+        }
+        #dataPanel .row {
+            display: flex; justify-content: space-between;
+        }
+        #dataPanel .row .val {
+            color: #2563eb; font-weight: 600;
+        }
+        #dataPanel .row .label {
+            color: #5f6b7a;
+        }
+        #dataPanel .divider {
+            border-top: 1px dashed #dce0e8; margin: 6px 0;
+        }
+        #dataPanel .result-row {
+            display: flex; justify-content: space-between;
+            font-weight: 700; color: #b91c1c; font-size: 14px;
+        }
+
+        /* ===== 底部操作提示 ===== */
+        #instructions {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.55); color: #fff;
+            padding: 10px 22px; border-radius: 30px;
+            font-size: 13px; letter-spacing: 0.3px;
+            backdrop-filter: blur(4px); z-index: 10;
+            white-space: nowrap; user-select: none;
+        }
+        #instructions span { margin: 0 8px; opacity: 0.6; }
+
+        /* 自动演示时按钮状态 */
+        .demo-running #demoBtn { background: #dc2626; color: #fff; }
+        .demo-running #demoBtn:hover { background: #b91c1c; }
+
+        /* ===== 响应式适配 ===== */
+        @media (max-width: 800px) {
+            #dataPanel { top: auto; bottom: 80px; right: 10px; font-size: 12px; min-width: 160px; padding: 12px 14px; }
+            #ui { width: 180px; padding: 16px; }
+            #ui h3 { font-size: 1rem; }
+            #instructions { font-size: 11px; padding: 6px 14px; }
+        }
+
+        /* CSS2D 标签样式 */
+        .label-3d {
+            color: #1a2744; font-size: 13px; font-weight: 600;
+            text-shadow: 0 1px 4px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.75);
+            padding: 2px 10px; border-radius: 12px;
+            border: 1px solid rgba(200,200,200,0.4);
+            backdrop-filter: blur(2px);
+            pointer-events: none; user-select: none;
+            white-space: nowrap;
+        }
+        .label-3d-sm {
+            font-size: 11px; padding: 1px 6px; opacity: 0.85;
+        }
+        .label-3d-scale {
+            color: #111; font-size: 12px; font-weight: 700;
+            text-shadow: 0 0 6px rgba(255,255,255,0.9);
+            pointer-events: none; user-select: none;
+        }
+
+        /* ===== 数据处理面板（按实验要求文档） ===== */
+        #procOpenBtn {
+            position: absolute; top: 20px; left: 290px;
+            z-index: 11;
+            padding: 10px 16px; border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            background: #1a2744; color: #fff;
+            box-shadow: 0 4px 14px rgba(26,39,68,0.25);
+        }
+        #procOpenBtn:hover { background: #2d3f5c; }
+        @media (max-width: 800px) {
+            #procOpenBtn { left: 12px; top: auto; bottom: 52px; font-size: 12px; padding: 8px 12px; }
+        }
+        #procOverlay {
+            display: none; position: fixed; inset: 0; z-index: 100;
+            background: rgba(26,39,68,0.45); backdrop-filter: blur(3px);
+            align-items: center; justify-content: center; padding: 16px;
+        }
+        #procOverlay.open { display: flex; }
+        #procPanel {
+            background: #fafbfd; color: #1a2744;
+            max-width: 980px; width: 100%; max-height: 92vh; overflow: auto;
+            border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 13px;
+        }
+        #procPanel header {
+            position: sticky; top: 0; z-index: 2;
+            background: linear-gradient(135deg, #1a2744, #2d4a7c);
+            color: #fff; padding: 16px 22px; border-radius: 16px 16px 0 0;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        #procPanel header h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+        #procPanel .proc-body { padding: 18px 22px 24px; }
+        #procPanel h4 {
+            margin: 18px 0 10px; font-size: 0.95rem; color: #1a2744;
+            border-left: 4px solid #2563eb; padding-left: 10px;
+        }
+        #procPanel .grid-3 {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+        }
+        @media (max-width: 700px) { #procPanel .grid-3 { grid-template-columns: 1fr; } }
+        #procPanel label.small { font-size: 12px; color: #5f6b7a; display: block; margin-bottom: 4px; }
+        #procPanel input[type="text"], #procPanel input[type="number"] {
+            width: 100%; padding: 8px 10px; border: 1px solid #cfd6e4; border-radius: 8px;
+            font-size: 13px; box-sizing: border-box;
+        }
+        #procPanel .proc-actions {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px;
+        }
+        #procPanel .proc-actions button {
+            padding: 9px 16px; border: none; border-radius: 8px; font-weight: 600;
+            font-size: 13px; cursor: pointer; background: #2563eb; color: #fff;
+        }
+        #procPanel .proc-actions button.secondary { background: #eef1f6; color: #1a2744; }
+        #procPanel .proc-actions button.danger { background: #dc2626; }
+        #procTableWrap { overflow-x: auto; margin-top: 8px; border: 1px solid #e2e6ed; border-radius: 10px; }
+        #procReadings {
+            width: 100%; border-collapse: collapse; font-size: 12.5px;
+            font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        }
+        #procReadings th, #procReadings td { border: 1px solid #e2e6ed; padding: 6px 8px; text-align: right; }
+        #procReadings th { background: #eef2f8; color: #3b4a5a; text-align: center; }
+        #procReadings td:first-child { text-align: center; background: #f8fafc; }
+        #procReadings input { width: 100%; border: none; background: transparent; text-align: right; font: inherit; padding: 4px; }
+        #procResult {
+            margin-top: 16px; padding: 14px 16px; background: #fff;
+            border: 1px solid #e2e6ed; border-radius: 10px; white-space: pre-wrap;
+            font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.65;
+            color: #111827;
+        }
+        #procResult .final-line { font-size: 1.05rem; font-weight: 700; color: #b91c1c; margin-top: 10px; }
+        #procResult .final-math { font-family: ui-monospace, Consolas, monospace; font-size: 1.08rem; font-weight: 700; color: #b91c1c; margin-top: 12px; }
+        #procResult .final-math .b { font-weight: 800; }
+        #procHint { font-size: 12px; color: #64748b; margin-top: 8px; }
+        #procPanel details { margin-top: 14px; padding: 10px 12px; background: #f1f5f9; border-radius: 8px; }
+        #procPanel details summary { cursor: pointer; font-weight: 600; color: #334155; }
+    </style>
+</head>
+<body>
+    <!-- ===== 左侧控制面板 ===== -->
+    <div id="ui">
+        <h3>🔬 杨氏模量 <small>3D 教学演示</small></h3>
+        <label>挂载砝码: <span id="weightCount">0</span> 个 (共 9 个，1 kg/个)</label>
+        <input type="range" id="weightSlider" min="0" max="9" step="1" value="0">
+        <div class="hint">
+            ⚡ 拖动滑块增减砝码<br>
+            观察金属丝伸长 & 光斑移动
+        </div>
+        <div class="btn-row">
+            <button id="demoBtn">▶ 自动演示</button>
+            <button id="resetViewBtn">⟲ 复位视角</button>
+        </div>
+    </div>
+    <button type="button" id="procOpenBtn">📐 数据处理</button>
+
+    <!-- ===== 右侧数据面板 ===== -->
+    <div id="dataPanel">
+        <div class="title">📊 实时测量数据</div>
+        <div class="row"><span class="label">砝码总质量</span><span class="val" id="dMass">0.00 kg</span></div>
+        <div class="row"><span class="label">金属丝伸长 ΔL</span><span class="val" id="dDeltaL">0.000 mm</span></div>
+        <div class="row"><span class="label">光杠杆转角 θ</span><span class="val" id="dTheta">0.000 mrad</span></div>
+        <div class="row"><span class="label">标尺读数变化 Δn</span><span class="val" id="dDeltaN">0.00 cm</span></div>
+        <div class="divider"></div>
+        <div class="row"><span class="label">金属丝原长 L</span><span class="val">1.000 m</span></div>
+        <div class="row"><span class="label">镜-尺距离 D</span><span class="val">2.000 m</span></div>
+        <div class="row"><span class="label">金属丝直径 d</span><span class="val">0.950 mm</span></div>
+        <div class="row"><span class="label">光杆杆常数 b</span><span class="val">75.0 mm</span></div>
+        <div class="divider"></div>
+        <div class="result-row">
+            <span>杨氏模量 E</span>
+            <span id="dE">—</span>
+        </div>
+    </div>
+
+    <!-- ===== 底部提示 ===== -->
+    <div id="instructions">
+        🖱 左键旋转 <span>|</span> 滚轮缩放 <span>|</span> 右键平移
+    </div>
+
+    <!-- ===== 杨氏模量数据处理（文档：表2-9-1～3、公式与不确定度） ===== -->
+    <div id="procOverlay" aria-hidden="true">
+        <div id="procPanel">
+            <header>
+                <h2>拉伸法测金属丝的杨氏模量 — 数据处理</h2>
+                <button type="button" class="secondary" id="procCloseBtn" style="background:rgba(255,255,255,0.15);color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;">关闭</button>
+            </header>
+            <div class="proc-body">
+                <details>
+                    <summary>使用说明</summary>
+                    <p style="margin:8px 0 0;line-height:1.7;">
+                        杨氏模量公式 <strong>E = 8FLD / (π d² b Δn̄)</strong>，其中 <strong>F 固定取 9.8 N</strong>（单块 1 kg 砝码对应拉力）。L、D、b 各填三次测量，单位均为 <strong>mm</strong>（保留 1 位小数）；d 为多次直径测量，<strong>mm</strong>（3 位小数）；标尺读数 n<sub>增</sub>、n<sub>减</sub> 及导出 Δn̄ 均为 <strong>cm</strong>（2 位小数）。
+                        相对误差按 <strong>E<sub>r</sub> = ΔL̄/L̄ + Δb̄/b̄ + 2Δd̄/d̄ + Δ(Δn̄)/Δn̄ + ΔD̄/D̄</strong> 计算；<strong>E<sub>r</sub> 最终结果取 1 位有效数字且只进不舍</strong>（如 0.023→0.03，0.14→0.2），再得 <strong>ΔE = E<sub>r</sub>·Ē</strong>，并输出 <strong>E = Ē ± ΔE</strong>（Pa，位数对齐）。
+                        表格填写后<strong>实时</strong>计算 n̄、Δn、E<sub>i</sub> 与最终结果；亦可点「计算」刷新全文报告。格拉布斯/3σ 剔除可选。数据自动保存在本机浏览器。
+                    </p>
+                </details>
+
+                <h4>一、几何量（各 3 次，mm，1 位小数）</h4>
+                <div class="grid-3">
+                    <div><label class="small">L₁、L₂、L₃（mm）</label><input type="text" id="pL123" value="1000.1,1000.0,999.9"></div>
+                    <div><label class="small">D₁、D₂、D₃（mm）</label><input type="text" id="pD123" value="2000.1,2000.0,1999.9"></div>
+                    <div><label class="small">b₁、b₂、b₃（mm）</label><input type="text" id="pb123" value="75.1,75.0,74.9"></div>
+                </div>
+
+                <h4>二、金属丝直径 d（多次测量，mm，3 位小数）</h4>
+                <input type="text" id="pdList" style="max-width:100%;" value="0.951,0.950,0.949,0.950,0.951,0.950">
+
+                <h4>三、B 类不确定度（仪器分度，矩形分布 u = Δ/√3）</h4>
+                <div class="grid-3">
+                    <div><label class="small">ΔL（mm）</label><input type="number" id="pDL" step="any" value="2.0"></div>
+                    <div><label class="small">ΔD（mm）</label><input type="number" id="pDD" step="any" value="2.0"></div>
+                    <div><label class="small">Δb（mm）</label><input type="number" id="pDb" step="any" value="0.1"></div>
+                    <div><label class="small">Δd（mm）</label><input type="number" id="pDd" step="any" value="0.004"></div>
+                    <div><label class="small">Δn 单次读数（cm）</label><input type="number" id="pDn" step="any" value="0.05"></div>
+                </div>
+
+                <h4>四、砝码与标尺读数</h4>
+                <div class="proc-actions" style="margin-top:0;">
+                    <button type="button" class="secondary" id="procAddRow">+ 添加一行</button>
+                    <button type="button" class="secondary" id="procDelRow">− 删除末行</button>
+                </div>
+                <div id="procTableWrap">
+                    <table id="procReadings">
+                        <thead>
+                            <tr>
+                                <th>次数</th>
+                                <th>m (kg)</th>
+                                <th>n<sub>增</sub> (cm)</th>
+                                <th>n<sub>减</sub> (cm)</th>
+                                <th>n̄ (cm)</th>
+                                <th>Δn (cm)</th>
+                                <th>E<sub>i</sub> (Pa)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="procReadBody"></tbody>
+                    </table>
+                </div>
+                <div class="grid-3" style="margin-top:12px;">
+                    <div>
+                        <label class="small">粗大误差判据</label>
+                        <select id="pOutRule" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cfd6e4;">
+                            <option value="grubbs">格拉布斯 (α=0.05)</option>
+                            <option value="3sigma">3σ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="proc-actions">
+                    <button type="button" id="procCalc">计算</button>
+                    <button type="button" class="secondary" id="procFillDemo">用 3D 演示默认参数填充</button>
+                    <button type="button" class="secondary" id="procExportCsv">导出 CSV</button>
+                    <button type="button" class="secondary" id="procExportTxt">导出 TXT</button>
+                </div>
+                <p id="procHint">提示：几何量与表格填写完整后<strong>自动</strong>计算 n̄、Δn、E<sub>i</sub> 与 E = Ē ± ΔE；E<sub>i</sub> 至少 3 个才可做格拉布斯剔除。导出前需已成功算出至少一次结果。</p>
+                <div id="procResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 引入 Three.js (ES Module) ===== -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        // ================================================================
+        //  导入 Three.js 核心库及扩展
+        // ================================================================
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // ================================================================
+        //  物理常数 (真实实验参数)
+        // ================================================================
+        const PHYS = {
+            g: 9.8,            // 重力加速度 N/kg
+            massPerWeight: 1.0, // 每个砝码质量 kg
+            L: 1.0,            // 金属丝原长 m
+            D: 2.0,            // 镜-尺距离 m
+            d: 0.95e-3,        // 金属丝直径 m（使每 kg Δn 约零点几 cm）
+            b: 75e-3,          // 光杠杆常数 m
+            E_steel: 2.0e11,   // 钢的杨氏模量 Pa (参考值)
+        };
+        /** 望远镜光轴高度 = 标尺 0 刻度（cm 坐标原点），世界坐标 y */
+        const OPTIC_AXIS_Y = 12.5;
+        /** 标尺半量程（cm），保证 9 kg 时光斑仍在尺内 */
+        const SCALE_HALF_CM = 10;
+        /** 布局：光杠杆与砝码错开，避免穿模（世界坐标） */
+        const LAYOUT = {
+            leverX: -0.32,
+            leverZ: 2.55,
+            weightRadius: 1.28,
+            weightHeight: 0.68,
+            weightYStep: 0.72,
+            panRadius: 1.85,
+        };
+        // 金属丝截面积
+        const A = Math.PI * (PHYS.d / 2) ** 2;
+
+        // ================================================================
+        //  场景 / 相机 / 渲染器
+        // ================================================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf4f7f6);
+        scene.fog = new THREE.Fog(0xf4f7f6, 40, 120);
+
+        const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 200);
+        camera.position.set(28, 18, 42);
+        const INITIAL_CAM_POS = camera.position.clone();
+        const INITIAL_TARGET = new THREE.Vector3(10, 10, 0);
+
+        // WebGL 渲染器
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+
+        // CSS2D 渲染器 (用于标签)
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none'; // 让标签不阻挡交互
+        document.body.appendChild(labelRenderer.domElement);
+
+        // 控制器
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.copy(INITIAL_TARGET);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.minDistance = 8;
+        controls.maxDistance = 100;
+        controls.update();
+
+        // ================================================================
+        //  灯光
+        // ================================================================
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdce3ed, 0.7);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(18, 35, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 100;
+        dirLight.shadow.camera.left = -20;
+        dirLight.shadow.camera.right = 20;
+        dirLight.shadow.camera.top = 20;
+        dirLight.shadow.camera.bottom = -20;
+        dirLight.shadow.bias = -0.001;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xc8d8ff, 0.4);
+        fillLight.position.set(-10, 15, -10);
+        scene.add(fillLight);
+
+        // ================================================================
+        //  材质
+        // ================================================================
+        const matMetal = new THREE.MeshStandardMaterial({ color: 0xb8c4d0, metalness: 0.6, roughness: 0.3 });
+        const matDarkMetal = new THREE.MeshStandardMaterial({ color: 0x6b7a8d, metalness: 0.7, roughness: 0.3 });
+        const matWire = new THREE.MeshStandardMaterial({ color: 0xd0d7e0, metalness: 0.8, roughness: 0.2 });
+        const matBrass = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.7, roughness: 0.2 });
+        const matFloor = new THREE.MeshStandardMaterial({ color: 0xe4e9f0, roughness: 0.8, metalness: 0.1 });
+        const matWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+        const matTelescope = new THREE.MeshStandardMaterial({ color: 0xb8c0c8, metalness: 0.45, roughness: 0.42 });
+        const matLens = new THREE.MeshStandardMaterial({ color: 0x223344, metalness: 0.2, roughness: 0.08, transparent: true, opacity: 0.35 });
+        const matChrome = new THREE.MeshStandardMaterial({ color: 0xdde2e8, metalness: 0.92, roughness: 0.18 });
+        const matCream = new THREE.MeshStandardMaterial({ color: 0xf2ebd9, roughness: 0.75, metalness: 0.05 });
+        const matBlackPlastic = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85, metalness: 0.08 });
+        const matLeverCast = new THREE.MeshStandardMaterial({ color: 0x9aa3ab, metalness: 0.35, roughness: 0.62 });
+        const matKnurl = new THREE.MeshStandardMaterial({ color: 0xc5cad1, metalness: 0.55, roughness: 0.48 });
+        /** 光杠杆实物：哑光银灰漆面 */
+        const matLeverPaintMatte = new THREE.MeshStandardMaterial({ color: 0x949ca4, metalness: 0.36, roughness: 0.74 });
+        /** 反射镜面：高反 + clearcoat */
+        const matLeverMirrorFace = new THREE.MeshPhysicalMaterial({
+            color: 0xd8eaf8,
+            metalness: 1,
+            roughness: 0.04,
+            clearcoat: 1,
+            clearcoatRoughness: 0.05,
+        });
+        /** 尾杆抛光金属 */
+        const matTailSteel = new THREE.MeshStandardMaterial({ color: 0xb0b8c0, metalness: 0.9, roughness: 0.16 });
+        const matScrewDark = new THREE.MeshStandardMaterial({ color: 0x25282c, metalness: 0.25, roughness: 0.82 });
+        /** 光杠杆支座（台面+立柱）半透明，避免挡视线 */
+        const matLeverSupportGlass = new THREE.MeshStandardMaterial({
+            color: 0xaab6c4,
+            metalness: 0.22,
+            roughness: 0.5,
+            transparent: true,
+            opacity: 0.4,
+        });
+        /** 金属丝下方竖向构件（下夹具、连接杆）半透明 */
+        const matCenterColumnGlass = new THREE.MeshStandardMaterial({
+            color: 0x6d7788,
+            metalness: 0.55,
+            roughness: 0.36,
+            transparent: true,
+            opacity: 0.38,
+        });
+
+        // ================================================================
+        //  地面 (接收阴影)
+        // ================================================================
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), matFloor);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -0.5;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // ================================================================
+        //  支架系统 (立柱 + 横梁 + 底座)
+        // ================================================================
+        // 底座
+        const base = new THREE.Mesh(new THREE.BoxGeometry(11, 0.8, 10), matDarkMetal);
+        base.position.set(0, -0.1, 0);
+        base.castShadow = true;
+        base.receiveShadow = true;
+        scene.add(base);
+
+        // 立柱
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 26, 32), matMetal);
+        pillar.position.set(-3, 12.5, 0);
+        pillar.castShadow = true;
+        pillar.receiveShadow = true;
+        scene.add(pillar);
+
+        // 顶部横梁
+        const topArm = new THREE.Mesh(new THREE.BoxGeometry(8.5, 0.6, 2.2), matDarkMetal);
+        topArm.position.set(0, 25.3, 0);
+        topArm.castShadow = true;
+        topArm.receiveShadow = true;
+        scene.add(topArm);
+
+        // ================================================================
+        //  金属丝 (可伸缩)
+        // ================================================================
+        const BASE_WIRE_LENGTH = 15;
+        const wireGeo = new THREE.CylinderGeometry(0.10, 0.10, BASE_WIRE_LENGTH, 16);
+        wireGeo.translate(0, -BASE_WIRE_LENGTH / 2, 0);
+        const wire = new THREE.Mesh(wireGeo, matWire);
+        wire.position.set(2, 25, 0);
+        wire.castShadow = true;
+        scene.add(wire);
+
+        // 上夹具
+        const upperChuck = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.6, 0.6, 16), matDarkMetal);
+        upperChuck.position.set(2, 25, 0);
+        upperChuck.castShadow = true;
+        scene.add(upperChuck);
+
+        // 下夹具（半透明，便于观察与金属丝、砝码的相对位置）
+        const lowerChuck = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.8, 1.0, 32), matCenterColumnGlass);
+        lowerChuck.position.set(2, 10, 0);
+        lowerChuck.castShadow = false;
+        lowerChuck.receiveShadow = true;
+        scene.add(lowerChuck);
+
+        // 砝码托盘（半径与砝码柱匹配，避免与光杠杆重叠）
+        const pan = new THREE.Mesh(new THREE.CylinderGeometry(LAYOUT.panRadius, LAYOUT.panRadius, 0.28, 32), matDarkMetal);
+        pan.position.set(2, 5.8, 0);
+        pan.castShadow = true;
+        pan.receiveShadow = true;
+        scene.add(pan);
+
+        // 托盘连接杆（半透明）
+        const panRod = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 4, 16), matCenterColumnGlass);
+        panRod.position.set(2, 8, 0);
+        panRod.castShadow = false;
+        scene.add(panRod);
+
+        // ================================================================
+        //  砝码 (9 个 × 1 kg)
+        // ================================================================
+        const weights = [];
+        for (let i = 0; i < 9; i++) {
+            const w = new THREE.Mesh(
+                new THREE.CylinderGeometry(LAYOUT.weightRadius, LAYOUT.weightRadius + 0.03, LAYOUT.weightHeight, 32),
+                matBrass
+            );
+            w.position.set(2, 6.42 + i * LAYOUT.weightYStep, 0);
+            w.castShadow = true;
+            w.receiveShadow = true;
+            w.visible = false;
+            scene.add(w);
+            weights.push(w);
+        }
+
+        // ================================================================
+        //  光杠杆（高精度：C 形架、镜框、中心座、尾锥、安装孔、滚花旋钮、螺钉）
+        // ================================================================
+        const leverGroup = new THREE.Group();
+        leverGroup.position.set(LAYOUT.leverX, 10.7, LAYOUT.leverZ);
+
+        function addKnurledKnob(x, y, z, ry, rz, scaleS) {
+            const g = new THREE.Group();
+            g.position.set(x, y, z);
+            g.rotation.y = ry;
+            g.rotation.z = rz;
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.125 * scaleS, 0.028 * scaleS, 8, 24), matKnurl);
+            ring.rotation.y = Math.PI / 2;
+            g.add(ring);
+            const core = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * scaleS, 0.11 * scaleS, 0.2 * scaleS, 16), matKnurl);
+            core.rotation.z = Math.PI / 2;
+            for (let i = 0; i < 22; i++) {
+                const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.016 * scaleS, 0.22 * scaleS, 0.032 * scaleS), matKnurl);
+                const a = (i / 22) * Math.PI * 2;
+                ridge.position.set(Math.cos(a) * 0.11 * scaleS, Math.sin(a) * 0.11 * scaleS, 0);
+                ridge.rotation.z = a;
+                g.add(ridge);
+            }
+            g.add(core);
+            leverGroup.add(g);
+        }
+
+        function addPhillipsScrew(px, py, pz, scaleS) {
+            const head = new THREE.Mesh(new THREE.CylinderGeometry(0.065 * scaleS, 0.065 * scaleS, 0.028 * scaleS, 6), matKnurl);
+            head.position.set(px, py, pz);
+            head.rotation.z = Math.PI / 2;
+            head.castShadow = true;
+            leverGroup.add(head);
+            const slot1 = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scaleS, 0.012 * scaleS, 0.014 * scaleS), matScrewDark);
+            slot1.position.set(px, py, pz + 0.015 * scaleS);
+            leverGroup.add(slot1);
+            const slot2 = new THREE.Mesh(new THREE.BoxGeometry(0.012 * scaleS, 0.09 * scaleS, 0.014 * scaleS), matScrewDark);
+            slot2.position.set(px, py, pz + 0.015 * scaleS);
+            leverGroup.add(slot2);
+        }
+
+        const cBase = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.34, 1.14), matLeverPaintMatte);
+        cBase.position.set(0, 0.12, 0);
+        cBase.castShadow = true;
+        leverGroup.add(cBase);
+        [[-0.42, -0.22], [0.42, -0.22], [-0.42, 0.22], [0.42, 0.22]].forEach(([hx, hz]) => {
+            const h = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.38, 14), matScrewDark);
+            h.position.set(hx, 0.12, hz);
+            h.rotation.x = Math.PI / 2;
+            leverGroup.add(h);
+        });
+
+        const footL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.36, 12), matBlackPlastic);
+        footL.position.set(-0.56, -0.08, -0.44);
+        footL.castShadow = true;
+        leverGroup.add(footL);
+        const footR = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.36, 12), matBlackPlastic);
+        footR.position.set(0.56, -0.08, -0.44);
+        footR.castShadow = true;
+        leverGroup.add(footR);
+
+        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.18, 0.38), matLeverPaintMatte);
+        armL.position.set(-0.57, 0.76, -0.14);
+        armL.castShadow = true;
+        leverGroup.add(armL);
+        const armR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.18, 0.38), matLeverPaintMatte);
+        armR.position.set(0.57, 0.76, -0.14);
+        armR.castShadow = true;
+        leverGroup.add(armR);
+        const yokeL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.12), matLeverPaintMatte);
+        yokeL.position.set(-0.57, 1.02, -0.02);
+        yokeL.castShadow = true;
+        leverGroup.add(yokeL);
+        const yokeR = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.12), matLeverPaintMatte);
+        yokeR.position.set(0.57, 1.02, -0.02);
+        yokeR.castShadow = true;
+        leverGroup.add(yokeR);
+
+        const cBridge = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.22, 0.28), matLeverPaintMatte);
+        cBridge.position.set(0, 1.42, -0.14);
+        cBridge.castShadow = true;
+        leverGroup.add(cBridge);
+
+        const stem = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.58, 0.44), matLeverPaintMatte);
+        stem.position.set(0, 0.46, 0.24);
+        stem.castShadow = true;
+        leverGroup.add(stem);
+        addPhillipsScrew(0.26, 0.52, 0.46, 1);
+        addPhillipsScrew(0.26, 0.38, 0.46, 1);
+
+        const mirrorBack = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 32), matLeverPaintMatte);
+        mirrorBack.position.set(0, 1.05, -0.06);
+        mirrorBack.rotation.x = Math.PI / 2;
+        mirrorBack.castShadow = true;
+        leverGroup.add(mirrorBack);
+        const mirrorRim = new THREE.Mesh(new THREE.TorusGeometry(0.51, 0.042, 10, 48), matBlackPlastic);
+        mirrorRim.position.set(0, 1.05, -0.11);
+        mirrorRim.rotation.x = Math.PI / 2;
+        mirrorRim.castShadow = true;
+        leverGroup.add(mirrorRim);
+        const mirrorRimOuter = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.018, 6, 40), matKnurl);
+        mirrorRimOuter.position.set(0, 1.05, -0.125);
+        mirrorRimOuter.rotation.x = Math.PI / 2;
+        leverGroup.add(mirrorRimOuter);
+        const mirror = new THREE.Mesh(new THREE.CircleGeometry(0.46, 64), matLeverMirrorFace);
+        mirror.position.set(0, 1.05, -0.095);
+        mirror.rotation.y = Math.PI;
+        mirror.castShadow = true;
+        leverGroup.add(mirror);
+
+        const tailUpper = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.05, 2.25, 16), matTailSteel);
+        tailUpper.position.set(0, -1.18, 0.24);
+        tailUpper.castShadow = true;
+        leverGroup.add(tailUpper);
+        const tailTip = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.006, 0.42, 12), matTailSteel);
+        tailTip.position.set(0, -2.51, 0.24);
+        tailTip.castShadow = true;
+        leverGroup.add(tailTip);
+
+        addKnurledKnob(-0.74, 1.05, -0.14, 0, Math.PI / 2, 1);
+        addKnurledKnob(0.74, 1.05, -0.14, 0, Math.PI / 2, 1);
+        addKnurledKnob(0.34, 0.44, 0.48, Math.PI / 2, 0, 0.88);
+
+        scene.add(leverGroup);
+
+        // ================================================================
+        //  光杠杆平台 (支撑块)
+        // ================================================================
+        // 光杠杆支座：勿用「整柱」包住 y=0～10，否则会与砝码柱（y≈6～12）穿模
+        const leverPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.95, 9.45, 0.95), matLeverSupportGlass);
+        leverPedestal.position.set(-0.38, 4.85, 2.52);
+        leverPedestal.castShadow = false;
+        leverPedestal.receiveShadow = true;
+        scene.add(leverPedestal);
+        const leverTableTop = new THREE.Mesh(new THREE.BoxGeometry(3.35, 0.52, 2.85), matLeverSupportGlass);
+        leverTableTop.position.set(-0.38, 10.2, 2.52);
+        leverTableTop.castShadow = false;
+        leverTableTop.receiveShadow = true;
+        scene.add(leverTableTop);
+
+        // ================================================================
+        //  立柱 + 标尺照明器 + 望远镜支架（与实物结构一致）
+        // ================================================================
+        const standPole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 14, 28), matChrome);
+        standPole.position.set(26, OPTIC_AXIS_Y, 2.2);
+        standPole.castShadow = true;
+        scene.add(standPole);
+        const standBasePlate = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.55, 0.25, 40), matMetal);
+        standBasePlate.position.set(26, OPTIC_AXIS_Y - 7.1, 2.2);
+        standBasePlate.receiveShadow = true;
+        scene.add(standBasePlate);
+
+        function makeStarKnob(px, py, pz) {
+            const k = new THREE.Group();
+            k.position.set(px, py, pz);
+            for (let i = 0; i < 5; i++) {
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.35), matBlackPlastic);
+                blade.position.y = Math.sin((i / 5) * Math.PI * 2) * 0.12;
+                blade.position.x = Math.cos((i / 5) * Math.PI * 2) * 0.12;
+                blade.rotation.z = (i / 5) * Math.PI * 2;
+                blade.castShadow = true;
+                k.add(blade);
+            }
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.18, 12), matBlackPlastic);
+            hub.rotation.x = Math.PI / 2;
+            k.add(hub);
+            return k;
+        }
+
+        const clampMat = new THREE.MeshStandardMaterial({ color: 0xc5ccd4, roughness: 0.55, metalness: 0.25 });
+        const clampIllu = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.55), clampMat);
+        clampIllu.position.set(26, OPTIC_AXIS_Y + 2.8, 2.2);
+        clampIllu.castShadow = true;
+        scene.add(clampIllu);
+        scene.add(makeStarKnob(26.45, OPTIC_AXIS_Y + 2.8, 2.2));
+        const clampTel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.55), clampMat);
+        clampTel.position.set(26, OPTIC_AXIS_Y - 0.2, 2.2);
+        clampTel.castShadow = true;
+        scene.add(clampTel);
+        scene.add(makeStarKnob(26.45, OPTIC_AXIS_Y - 0.2, 2.2));
+
+        // 标尺照明器（奶黄色外壳、竖槽、内标尺）
+        const scaleGroup = new THREE.Group();
+        const illuOuter = new THREE.Mesh(new THREE.BoxGeometry(0.55, SCALE_HALF_CM * 2 + 1.2, 2.6), matCream);
+        illuOuter.castShadow = true;
+        illuOuter.receiveShadow = true;
+        scaleGroup.add(illuOuter);
+        const slotRim = new THREE.Mesh(new THREE.BoxGeometry(0.22, SCALE_HALF_CM * 2 + 0.35, 1.25), matBlackPlastic);
+        slotRim.position.set(0, 0, 0.42);
+        scaleGroup.add(slotRim);
+        const scaleBoard = new THREE.Mesh(new THREE.BoxGeometry(0.06, SCALE_HALF_CM * 2, 0.85), matWhite);
+        scaleBoard.position.set(-0.02, 0, 0.42);
+        scaleBoard.receiveShadow = true;
+        scaleGroup.add(scaleBoard);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x111111 });
+        for (let cm = -SCALE_HALF_CM; cm <= SCALE_HALF_CM; cm++) {
+            const yLocal = cm;
+            const isMajor = cm % 5 === 0;
+            const len = isMajor ? 0.55 : (cm % 1 === 0 ? 0.38 : 0.22);
+            const pts = [
+                new THREE.Vector3(-0.04, yLocal, 0.82),
+                new THREE.Vector3(-0.04 + len, yLocal, 0.82)
+            ];
+            scaleGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+        }
+        const cv = document.createElement('canvas');
+        cv.width = 512;
+        cv.height = 128;
+        const cx = cv.getContext('2d');
+        cx.fillStyle = '#e8dcc8';
+        cx.fillRect(0, 0, 512, 128);
+        cx.fillStyle = '#1a2744';
+        cx.font = 'bold 38px sans-serif';
+        cx.fillText('标尺照明器', 120, 52);
+        cx.font = 'bold 26px sans-serif';
+        cx.fillText('西安理工大学', 150, 92);
+        const texIllu = new THREE.CanvasTexture(cv);
+        if (THREE.SRGBColorSpace !== undefined) texIllu.colorSpace = THREE.SRGBColorSpace;
+        const topLbl = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.48), new THREE.MeshBasicMaterial({ map: texIllu, transparent: true }));
+        topLbl.position.set(0, SCALE_HALF_CM + 0.55, 1.15);
+        topLbl.rotation.x = -0.15;
+        scaleGroup.add(topLbl);
+
+        scaleGroup.position.set(26, OPTIC_AXIS_Y, 0.2);
+        scene.add(scaleGroup);
+
+        for (let cm = -SCALE_HALF_CM; cm <= SCALE_HALF_CM; cm += 5) {
+            const lbl = document.createElement('div');
+            lbl.textContent = cm === 0 ? '0' : (cm > 0 ? '+' + cm : String(cm));
+            lbl.className = 'label-3d-scale';
+            const label = new CSS2DObject(lbl);
+            label.position.set(26.35, OPTIC_AXIS_Y + cm, 0.95);
+            scene.add(label);
+        }
+
+        // 望远镜（镜筒、物镜喇叭口、目镜与调焦滚花、侧向手轮、黑色底座）
+        const telescopeGroup = new THREE.Group();
+        const telBase = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.28, 1.4), matBlackPlastic);
+        telBase.position.set(0, -0.55, 0);
+        telBase.castShadow = true;
+        telescopeGroup.add(telBase);
+        const tubeMain = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.42, 2.2, 28), matTelescope);
+        tubeMain.rotation.x = Math.PI / 2;
+        tubeMain.castShadow = true;
+        telescopeGroup.add(tubeMain);
+        const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.4, 0.55, 28), matTelescope);
+        bell.rotation.x = Math.PI / 2;
+        bell.position.z = -1.35;
+        bell.castShadow = true;
+        telescopeGroup.add(bell);
+        const objRing = new THREE.Mesh(new THREE.CylinderGeometry(0.64, 0.64, 0.12, 28), matDarkMetal);
+        objRing.rotation.x = Math.PI / 2;
+        objRing.position.z = -1.62;
+        telescopeGroup.add(objRing);
+        const objGlass = new THREE.Mesh(new THREE.CircleGeometry(0.52, 32), matLens);
+        objGlass.position.z = -1.68;
+        objGlass.rotation.x = Math.PI / 2;
+        telescopeGroup.add(objGlass);
+        const eyeHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.34, 0.45, 20), matDarkMetal);
+        eyeHousing.rotation.x = Math.PI / 2;
+        eyeHousing.position.z = 1.32;
+        telescopeGroup.add(eyeHousing);
+        const focusRing = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.22, 24), matKnurl);
+        focusRing.rotation.x = Math.PI / 2;
+        focusRing.position.z = 1.58;
+        telescopeGroup.add(focusRing);
+        const eyeLens = new THREE.Mesh(new THREE.CircleGeometry(0.2, 20), matLens);
+        eyeLens.position.z = 1.72;
+        eyeLens.rotation.x = Math.PI / 2;
+        telescopeGroup.add(eyeLens);
+        const sight = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 0.12), matBlackPlastic);
+        sight.position.set(0, 0.42, 1.15);
+        telescopeGroup.add(sight);
+        const sideWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.12, 24), matChrome);
+        sideWheel.rotation.z = Math.PI / 2;
+        sideWheel.position.set(0.48, 0.05, -0.2);
+        telescopeGroup.add(sideWheel);
+        const thumbUnder = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.12, 10), matBlackPlastic);
+        thumbUnder.position.set(-0.35, -0.68, 0.5);
+        thumbUnder.rotation.z = 0.4;
+        telescopeGroup.add(thumbUnder);
+
+        telescopeGroup.position.set(26, OPTIC_AXIS_Y, 1.35);
+        telescopeGroup.lookAt(new THREE.Vector3(LAYOUT.leverX, OPTIC_AXIS_Y - 0.2, LAYOUT.leverZ - 0.08));
+        scene.add(telescopeGroup);
+
+        // ================================================================
+        //  激光光路
+        // ================================================================
+        const beamMat = new THREE.MeshBasicMaterial({
+            color: 0xff3333,
+            transparent: true,
+            opacity: 0.7
+        });
+
+        // 入射光束 (圆柱体)
+        const inBeamGeo = new THREE.CylinderGeometry(0.04, 0.04, 1, 8);
+        inBeamGeo.translate(0, 0.5, 0);
+        inBeamGeo.rotateX(Math.PI / 2);
+        const inBeam = new THREE.Mesh(inBeamGeo, beamMat);
+        scene.add(inBeam);
+
+        // 反射光束
+        const outBeamGeo = new THREE.CylinderGeometry(0.04, 0.04, 1, 8);
+        outBeamGeo.translate(0, 0.5, 0);
+        outBeamGeo.rotateX(Math.PI / 2);
+        const outBeam = new THREE.Mesh(outBeamGeo, beamMat);
+        scene.add(outBeam);
+
+        // 光斑
+        const spotMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const spotMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 24), spotMat);
+        scene.add(spotMesh);
+
+        // 光斑光晕
+        const glowMat = new THREE.MeshBasicMaterial({
+            color: 0xff4444,
+            transparent: true,
+            opacity: 0.25
+        });
+        const glowMesh = new THREE.Mesh(new THREE.SphereGeometry(0.40, 16, 16), glowMat);
+        scene.add(glowMesh);
+
+        // ================================================================
+        //  光斑轨迹 (拖尾效果)
+        // ================================================================
+        const MAX_TRAIL = 60;
+        const trailPositions = [];
+        const trailGeo = new THREE.BufferGeometry();
+        const trailPosArray = new Float32Array(MAX_TRAIL * 3);
+        trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPosArray, 3));
+        trailGeo.setDrawRange(0, 0);
+        const trailMat2 = new THREE.LineBasicMaterial({
+            color: 0xff6666,
+            transparent: true,
+            opacity: 0.35,
+            linewidth: 1
+        });
+        const trailLine = new THREE.Line(trailGeo, trailMat2);
+        scene.add(trailLine);
+
+        // 轨迹点 (小圆球)
+        const dotMat = new THREE.MeshBasicMaterial({
+            color: 0xff6666,
+            transparent: true,
+            opacity: 0.4
+        });
+        const trailDots = [];
+        for (let i = 0; i < 20; i++) {
+            const dot = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), dotMat);
+            dot.visible = false;
+            scene.add(dot);
+            trailDots.push(dot);
+        }
+
+        // ================================================================
+        //  CSS2D 标签 — 部件标注
+        // ================================================================
+        function makeLabel(text, pos, extraClass = '') {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.className = 'label-3d ' + extraClass;
+            const label = new CSS2DObject(div);
+            label.position.copy(pos);
+            scene.add(label);
+            return label;
+        }
+
+        makeLabel('🏗 支架', new THREE.Vector3(-3, 16, 1.2));
+        makeLabel('🔩 金属丝', new THREE.Vector3(2.8, 18, 0));
+        makeLabel('⚖ 光杠杆', new THREE.Vector3(LAYOUT.leverX + 0.6, 12.5, LAYOUT.leverZ + 0.35));
+        makeLabel('🪞 反射镜', new THREE.Vector3(LAYOUT.leverX + 0.35, 11.9, LAYOUT.leverZ), 'label-3d-sm');
+        makeLabel('🏋 砝码', new THREE.Vector3(3.5, 4.5, 0.4));
+        makeLabel('📏 标尺照明器', new THREE.Vector3(27.2, OPTIC_AXIS_Y + 6, 0));
+        makeLabel('🔭 望远镜', new THREE.Vector3(27, 14.5, 2.2));
+        makeLabel('🔴 光斑', new THREE.Vector3(26.5, 12.5, 1.0), 'label-3d-sm');
+
+        // ================================================================
+        //  交互状态
+        // ================================================================
+        const slider = document.getElementById('weightSlider');
+        const weightCountLabel = document.getElementById('weightCount');
+        const demoBtn = document.getElementById('demoBtn');
+        const resetViewBtn = document.getElementById('resetViewBtn');
+
+        // 金属丝视觉伸长（仅用于丝与夹具动画）
+        const VISUAL_STRETCH = 0.25;
+        /** 光杠杆倾角显示放大（光斑位移仍按真实物理） */
+        const LEVER_ANGLE_VIS = 55;
+
+        const lightSource = new THREE.Vector3(25.6, OPTIC_AXIS_Y, 1.15);
+
+        let isDemoRunning = false;
+        let demoTimer = null;
+
+        // ================================================================
+        //  核心更新函数
+        // ================================================================
+        function updateScene() {
+            const count = parseInt(slider.value);
+            weightCountLabel.textContent = count;
+
+            // ---- 砝码显隐 ----
+            weights.forEach((w, i) => { w.visible = i < count; });
+
+            // ---- 视觉伸长 ----
+            const visualDeltaL = count * VISUAL_STRETCH;
+            wire.scale.y = (BASE_WIRE_LENGTH + visualDeltaL) / BASE_WIRE_LENGTH;
+
+            const yOff = -visualDeltaL;
+            lowerChuck.position.y = 10 + yOff;
+            pan.position.y = 5.8 + yOff;
+            panRod.position.y = 8 + yOff;
+            weights.forEach((w, i) => {
+                w.position.y = 6.42 + yOff + i * LAYOUT.weightYStep;
+            });
+
+            leverGroup.position.set(LAYOUT.leverX, 10.7 + yOff, LAYOUT.leverZ);
+
+            const F = count * PHYS.massPerWeight * PHYS.g;
+            const deltaL_real = count > 0 ? (F * PHYS.L) / (A * PHYS.E_steel) : 0;
+            const theta_real = count > 0 ? deltaL_real / PHYS.b : 0;
+            leverGroup.rotation.x = -theta_real * LEVER_ANGLE_VIS;
+
+            const mirrorHitY = leverGroup.position.y + 1.05;
+            const mirrorPos = new THREE.Vector3(LAYOUT.leverX, mirrorHitY, LAYOUT.leverZ - 0.1);
+
+            const deltaN_m = PHYS.D * Math.tan(2 * theta_real);
+            const deltaN_cm = deltaN_m * 100;
+            const targetY = OPTIC_AXIS_Y - deltaN_cm;
+            const targetPos = new THREE.Vector3(25.85, targetY, 0.88);
+
+            // 更新光斑
+            spotMesh.position.copy(targetPos);
+            glowMesh.position.copy(targetPos);
+            glowMesh.position.z = 0.1;
+
+            // ---- 更新光束 ----
+            const inDist = lightSource.distanceTo(mirrorPos);
+            inBeam.position.copy(lightSource);
+            inBeam.lookAt(mirrorPos);
+            inBeam.scale.z = inDist;
+
+            const outDist = mirrorPos.distanceTo(targetPos);
+            outBeam.position.copy(mirrorPos);
+            outBeam.lookAt(targetPos);
+            outBeam.scale.z = outDist;
+
+            // ---- 更新光斑轨迹 ----
+            trailPositions.push(targetPos.clone());
+            if (trailPositions.length > MAX_TRAIL) trailPositions.shift();
+
+            const posAttr = trailLine.geometry.attributes.position;
+            const array = posAttr.array;
+            const len = trailPositions.length;
+            for (let i = 0; i < len; i++) {
+                const p = trailPositions[i];
+                array[i * 3] = p.x;
+                array[i * 3 + 1] = p.y;
+                array[i * 3 + 2] = p.z;
+            }
+            posAttr.needsUpdate = true;
+            trailGeo.setDrawRange(0, len);
+
+            // 轨迹点 (取最近 20 个)
+            const dotCount = Math.min(trailDots.length, len);
+            for (let i = 0; i < trailDots.length; i++) {
+                if (i < dotCount) {
+                    const idx = len - dotCount + i;
+                    const p = trailPositions[idx];
+                    trailDots[i].position.copy(p);
+                    trailDots[i].visible = true;
+                    // 透明度渐变 (新的更亮)
+                    trailDots[i].material.opacity = 0.15 + 0.35 * (i / dotCount);
+                } else {
+                    trailDots[i].visible = false;
+                }
+            }
+
+            // ---- 更新数据面板 (真实物理值) ----
+            updateDataPanel(count);
+        }
+
+        // ================================================================
+        //  数据面板更新 (真实物理计算)
+        // ================================================================
+        function updateDataPanel(count) {
+            const m = count * PHYS.massPerWeight;
+            const Ftot = m * PHYS.g;
+            const deltaL_real = count > 0 ? (Ftot * PHYS.L) / (A * PHYS.E_steel) : 0;
+            const theta_real = count > 0 ? deltaL_real / PHYS.b : 0;
+            const deltaN_real = count > 0 ? PHYS.D * Math.tan(2 * theta_real) : 0;
+            const deltaN_cm = deltaN_real * 100;
+
+            document.getElementById('dMass').textContent = m.toFixed(2) + ' kg';
+            document.getElementById('dDeltaL').textContent = (deltaL_real * 1000).toFixed(3) + ' mm';
+            document.getElementById('dTheta').textContent = (theta_real * 1000).toFixed(3) + ' mrad';
+            document.getElementById('dDeltaN').textContent = deltaN_cm.toFixed(2) + ' cm';
+
+            const F_fixed = 9.8;
+            if (count > 0) {
+                const dnPerKg = deltaN_real / count;
+                const E_calc = (8 * F_fixed * PHYS.L * PHYS.D) / (Math.PI * PHYS.d ** 2 * PHYS.b * dnPerKg);
+                const exp = Math.floor(Math.log10(E_calc));
+                const mant = E_calc / (10 ** exp);
+                document.getElementById('dE').innerHTML = `${mant.toFixed(2)} × 10<sup>${exp}</sup> Pa`;
+            } else {
+                document.getElementById('dE').textContent = '—';
+            }
+        }
+
+        // ================================================================
+        //  自动演示
+        // ================================================================
+        let demoDirection = 1;
+
+        function toggleDemo() {
+            isDemoRunning = !isDemoRunning;
+            if (isDemoRunning) {
+                demoBtn.textContent = '⏹ 停止';
+                demoBtn.classList.add('active');
+                document.body.classList.add('demo-running');
+                runDemoStep();
+            } else {
+                stopDemo();
+            }
+        }
+
+        function runDemoStep() {
+            if (!isDemoRunning) return;
+            let val = parseInt(slider.value) + demoDirection;
+            if (val >= 9) { val = 9; demoDirection = -1; }
+            if (val <= 0) { val = 0; demoDirection = 1; }
+            slider.value = val;
+            updateScene();
+            demoTimer = setTimeout(runDemoStep, 1200);
+        }
+
+        function stopDemo() {
+            isDemoRunning = false;
+            demoBtn.textContent = '▶ 自动演示';
+            demoBtn.classList.remove('active');
+            document.body.classList.remove('demo-running');
+            if (demoTimer) {
+                clearTimeout(demoTimer);
+                demoTimer = null;
+            }
+        }
+
+        // ================================================================
+        //  复位视角
+        // ================================================================
+        function resetView() {
+            camera.position.copy(INITIAL_CAM_POS);
+            controls.target.copy(INITIAL_TARGET);
+            controls.update();
+        }
+
+        // ================================================================
+        //  事件绑定
+        // ================================================================
+        slider.addEventListener('input', () => {
+            if (isDemoRunning) stopDemo();
+            updateScene();
+        });
+
+        demoBtn.addEventListener('click', toggleDemo);
+        resetViewBtn.addEventListener('click', resetView);
+
+        // 键盘快捷键: 空格切换演示, R 复位
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleDemo();
+            }
+            if (e.code === 'KeyR') {
+                resetView();
+            }
+        });
+
+        // ================================================================
+        //  窗口自适应
+        // ================================================================
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            labelRenderer.setSize(w, h);
+        });
+
+        // ================================================================
+        //  初始场景
+        // ================================================================
+        updateScene();
+
+        window.__YOUNG_DEMO_PHYS__ = {
+            g: PHYS.g,
+            L: PHYS.L,
+            D: PHYS.D,
+            d_mm: PHYS.d * 1000,
+            b_mm: PHYS.b * 1000,
+            massPerWeight: PHYS.massPerWeight,
+            F_fixed_N: 9.8,
+        };
+
+        // ================================================================
+        //  渲染循环
+        // ================================================================
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            // 光斑呼吸动画
+            const breath = 0.85 + 0.15 * Math.sin(Date.now() * 0.003);
+            spotMesh.scale.setScalar(breath);
+            glowMesh.scale.setScalar(1.5 * breath);
+
+            // 光束透明度微动
+            beamMat.opacity = 0.6 + 0.15 * Math.sin(Date.now() * 0.002);
+
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        animate();
+
+        console.log('✅ 杨氏模量 3D 教学演示已启动');
+        console.log('📌 快捷键: Space=自动演示, R=复位视角');
+    </script>
+
+    <script>
+    (function () {
+        const LS_KEY = 'young_modulus_proc_v2';
+        const g = 9.8;
+        const F_FIXED = 9.8;
+
+        const GRUBBS_G05 = {
+            3: 1.153, 4: 1.463, 5: 1.672, 6: 1.822, 7: 1.938, 8: 2.032,
+            9: 2.110, 10: 2.176, 11: 2.234, 12: 2.285, 13: 2.331, 14: 2.371,
+            15: 2.409, 16: 2.443, 17: 2.475, 18: 2.504, 19: 2.532, 20: 2.557,
+            21: 2.58, 22: 2.6, 23: 2.62, 24: 2.64, 25: 2.66, 26: 2.68, 27: 2.7, 28: 2.71, 29: 2.73, 30: 2.75
+        };
+
+        function grubbsCrit(n) {
+            if (n < 3) return Infinity;
+            if (n > 30) return 2.75;
+            return GRUBBS_G05[n] || 2.57;
+        }
+
+        function parseList(str) {
+            return str.split(/[,，;\s]+/).map(s => s.trim()).filter(Boolean).map(Number).filter(x => !Number.isNaN(x));
+        }
+
+        function mean(arr) {
+            if (!arr.length) return NaN;
+            return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+
+        function stdSample(arr) {
+            const n = arr.length;
+            if (n < 2) return 0;
+            const m = mean(arr);
+            return Math.sqrt(arr.reduce((s, x) => s + (x - m) ** 2, 0) / (n - 1));
+        }
+
+        function uATypeMean(arr) {
+            const n = arr.length;
+            if (n < 2) return 0;
+            return stdSample(arr) / Math.sqrt(n);
+        }
+
+        function uBRect(delta) {
+            return delta / Math.sqrt(3);
+        }
+
+        function combineUAUB(uA, uB) {
+            return Math.sqrt(uA * uA + uB * uB);
+        }
+
+        function youngE(L, D, d, b, deltaN_m) {
+            return (8 * F_FIXED * L * D) / (Math.PI * d * d * b * deltaN_m);
+        }
+
+        /** E_r：保留 1 位有效数字、只进不舍（向上取整到该精度） */
+        function ceilErOneSignificantDigit(er) {
+            if (!isFinite(er) || er <= 0) return er;
+            let e = Math.floor(Math.log10(er));
+            let mant = er / Math.pow(10, e);
+            let m = Math.ceil(mant - 1e-15);
+            if (m >= 10) {
+                m = 1;
+                e += 1;
+            }
+            return m * Math.pow(10, e);
+        }
+
+        function formatErDimensionless(x) {
+            if (!isFinite(x) || x <= 0) return '—';
+            const exp = Math.floor(Math.log10(x));
+            const dec = Math.max(0, -exp);
+            let s = x.toFixed(dec);
+            if (s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, '');
+            return s;
+        }
+
+        /** E_r 最终结果：百分数、1 位有效数字、只进不舍（如 0.034→4%） */
+        function formatErFinAsPercent(erFin) {
+            if (!isFinite(erFin) || erFin <= 0) return '—';
+            const pct = ceilErOneSignificantDigit(erFin * 100);
+            return formatErDimensionless(pct) + '%';
+        }
+
+        function formatErRawDisplay(x) {
+            if (!isFinite(x) || x <= 0) return '—';
+            let s = x.toFixed(5);
+            if (s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, '');
+            return s;
+        }
+
+        /** Ē 与 ΔE（已按 1 位有效数字只进不舍）同 10^exp 尾数、小数位对齐 */
+        function alignedEMantissas(Ebar, deltaEDisp) {
+            if (!isFinite(Ebar) || !isFinite(deltaEDisp) || Ebar === 0 || deltaEDisp <= 0) return null;
+            const exp = Math.floor(Math.log10(Math.abs(Ebar)));
+            const manE = Ebar / Math.pow(10, exp);
+            const manU = deltaEDisp / Math.pow(10, exp);
+            const dec = Math.max(0, -Math.floor(Math.log10(manU)));
+            const r = Math.pow(10, dec);
+            const manER = Math.round(manE * r) / r;
+            const sE = manER.toFixed(dec);
+            const sU = manU.toFixed(dec);
+            const w = Math.max(sE.length, sU.length);
+            return { sE, sU, w, exp };
+        }
+
+        /** E = Ē ± ΔE（HTML，等宽小数位），单位 N/㎡ */
+        function formatBoldEplusMinus(Ebar, deltaEDisp) {
+            const a = alignedEMantissas(Ebar, deltaEDisp);
+            if (!a) return '<span class="b">E</span> = —';
+            const { sE, sU, w, exp } = a;
+            return '<span class="b">E</span> = (' + sE.padStart(w, ' ') + ' ± ' + sU.padStart(w, ' ') + ') × 10<sup>' + exp + '</sup> N/㎡';
+        }
+
+        function grubbsRemoveOne(Es, rule) {
+            const n = Es.length;
+            if (n < 3) return { list: Es.slice(), removed: null, reason: null };
+            const m = mean(Es);
+            const s = stdSample(Es);
+            if (s === 0 || !isFinite(s)) return { list: Es.slice(), removed: null, reason: null };
+            let idx = 0;
+            let maxG = -1;
+            for (let i = 0; i < n; i++) {
+                const G = Math.abs(Es[i] - m) / s;
+                if (G > maxG) { maxG = G; idx = i; }
+            }
+            if (rule === '3sigma') {
+                if (maxG <= 3) return { list: Es.slice(), removed: null, reason: null };
+            } else {
+                if (maxG <= grubbsCrit(n)) return { list: Es.slice(), removed: null, reason: null };
+            }
+            const removed = Es[idx];
+            const list = Es.filter((_, i) => i !== idx);
+            const crit = rule === '3sigma' ? '3σ' : '格拉布斯 G₀.₀₅(' + n + ')=' + grubbsCrit(n).toFixed(3);
+            return { list, removed, reason: '剔除可疑值 E=' + removed.toExponential(4) + ' Pa（' + crit + '，Gmax=' + maxG.toFixed(3) + '）' };
+        }
+
+        function grubbsLoop(Es, rule, log) {
+            let list = Es.slice();
+            while (list.length >= 3) {
+                const r = grubbsRemoveOne(list, rule);
+                if (!r.removed) break;
+                log.push(r.reason);
+                list = r.list;
+            }
+            return list;
+        }
+
+        const overlay = document.getElementById('procOverlay');
+        const procOpenBtn = document.getElementById('procOpenBtn');
+        const procCloseBtn = document.getElementById('procCloseBtn');
+        const procReadBody = document.getElementById('procReadBody');
+        const procResult = document.getElementById('procResult');
+
+        function defaultRows() {
+            const masses = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(m => (m * 1).toFixed(2));
+            const baseN = 0;
+            return masses.map((mass, i) => ({
+                m: mass,
+                up: (baseN + i * 0.37 + 0.01).toFixed(2),
+                dn: (baseN + i * 0.37).toFixed(2),
+            }));
+        }
+
+        function buildRows(data) {
+            procReadBody.innerHTML = '';
+            const rows = data && data.length ? data : defaultRows();
+            rows.forEach((r, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + (i + 1) + '</td>' +
+                    '<td><input type="text" class="p-m" value="' + (r.m ?? '') + '"></td>' +
+                    '<td><input type="text" class="p-up" value="' + (r.up ?? '') + '"></td>' +
+                    '<td><input type="text" class="p-dn" value="' + (r.dn ?? r.down ?? '') + '"></td>' +
+                    '<td class="p-nbar">—</td>' +
+                    '<td class="p-dnlt">—</td>' +
+                    '<td class="p-ei">—</td>';
+                procReadBody.appendChild(tr);
+            });
+        }
+
+        function readRowsFromDom() {
+            const out = [];
+            procReadBody.querySelectorAll('tr').forEach(tr => {
+                const m = tr.querySelector('.p-m')?.value.trim() ?? '';
+                const up = tr.querySelector('.p-up')?.value.trim() ?? '';
+                const dn = tr.querySelector('.p-dn')?.value.trim() ?? '';
+                out.push({ m, up, dn });
+            });
+            return out;
+        }
+
+        function saveLS() {
+            try {
+                const payload = {
+                    L123: document.getElementById('pL123').value,
+                    D123: document.getElementById('pD123').value,
+                    b123: document.getElementById('pb123').value,
+                    dList: document.getElementById('pdList').value,
+                    DL: document.getElementById('pDL').value,
+                    DD: document.getElementById('pDD').value,
+                    Db: document.getElementById('pDb').value,
+                    Dd: document.getElementById('pDd').value,
+                    Dn: document.getElementById('pDn').value,
+                    rule: document.getElementById('pOutRule').value,
+                    rows: readRowsFromDom(),
+                };
+                localStorage.setItem(LS_KEY, JSON.stringify(payload));
+            } catch (e) { /* ignore */ }
+        }
+
+        function loadLS() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                if (!raw) { buildRows(); return; }
+                const o = JSON.parse(raw);
+                if (o.L123) document.getElementById('pL123').value = o.L123;
+                if (o.D123) document.getElementById('pD123').value = o.D123;
+                if (o.b123) document.getElementById('pb123').value = o.b123;
+                if (o.dList) document.getElementById('pdList').value = o.dList;
+                if (o.DL != null) document.getElementById('pDL').value = o.DL;
+                if (o.DD != null) document.getElementById('pDD').value = o.DD;
+                if (o.Db != null) document.getElementById('pDb').value = o.Db;
+                if (o.Dd != null) document.getElementById('pDd').value = o.Dd;
+                if (o.Dn != null) document.getElementById('pDn').value = o.Dn;
+                if (o.rule) document.getElementById('pOutRule').value = o.rule;
+                buildRows(o.rows);
+            } catch (e) {
+                buildRows();
+            }
+        }
+
+        procOpenBtn.addEventListener('click', () => {
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden', 'false');
+        });
+        procCloseBtn.addEventListener('click', () => {
+            overlay.classList.remove('open');
+            overlay.setAttribute('aria-hidden', 'true');
+            saveLS();
+        });
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('open');
+                saveLS();
+            }
+        });
+
+        document.getElementById('procAddRow').addEventListener('click', () => {
+            const tr = document.createElement('tr');
+            const n = procReadBody.querySelectorAll('tr').length + 1;
+            tr.innerHTML =
+                '<td>' + n + '</td>' +
+                '<td><input type="text" class="p-m" value=""></td>' +
+                '<td><input type="text" class="p-up" value=""></td>' +
+                '<td><input type="text" class="p-dn" value=""></td>' +
+                '<td class="p-nbar">—</td>' +
+                '<td class="p-dnlt">—</td>' +
+                '<td class="p-ei">—</td>';
+            procReadBody.appendChild(tr);
+            renumberRows();
+            saveLS();
+            runCalc();
+        });
+        document.getElementById('procDelRow').addEventListener('click', () => {
+            const trs = procReadBody.querySelectorAll('tr');
+            if (trs.length > 2) {
+                trs[trs.length - 1].remove();
+                renumberRows();
+                saveLS();
+                runCalc();
+            }
+        });
+
+        function renumberRows() {
+            procReadBody.querySelectorAll('tr').forEach((tr, i) => {
+                tr.querySelector('td').textContent = String(i + 1);
+            });
+        }
+
+        document.getElementById('procFillDemo').addEventListener('click', () => {
+            const P = window.__YOUNG_DEMO_PHYS__;
+            if (!P) {
+                alert('3D 场景尚未初始化，请稍后重试。');
+                return;
+            }
+            const mm1 = (x) => (x * 1000).toFixed(1);
+            document.getElementById('pL123').value = [mm1(P.L), mm1(P.L), mm1(P.L)].join(',');
+            document.getElementById('pD123').value = [mm1(P.D), mm1(P.D), mm1(P.D)].join(',');
+            document.getElementById('pb123').value = [P.b_mm, P.b_mm, P.b_mm].map((x) => Number(x).toFixed(1)).join(',');
+            const dmm = P.d_mm;
+            document.getElementById('pdList').value = [dmm, dmm, dmm, dmm, dmm, dmm].map((x) => Number(x).toFixed(3)).join(',');
+            const rows = [];
+            for (let i = 0; i <= 9; i++) {
+                const m = (i * P.massPerWeight).toFixed(2);
+                const n0 = i * 0.37;
+                rows.push({ m, up: (n0 + 0.01).toFixed(2), dn: n0.toFixed(2) });
+            }
+            buildRows(rows);
+            saveLS();
+            runCalc();
+        });
+
+        function gatherValidated() {
+            const Lmm = parseList(document.getElementById('pL123').value);
+            const Dmm = parseList(document.getElementById('pD123').value);
+            const bsMm = parseList(document.getElementById('pb123').value);
+            const dsMm = parseList(document.getElementById('pdList').value);
+            if (Lmm.length !== 3) throw new Error('L 需要恰好 3 个数值（mm）。');
+            if (Dmm.length !== 3) throw new Error('D 需要恰好 3 个数值（mm）。');
+            if (bsMm.length !== 3) throw new Error('b 需要恰好 3 个数值（mm）。');
+            if (dsMm.length < 2) throw new Error('直径 d 至少需要 2 个数值（mm）。');
+
+            const Ls_m = Lmm.map(x => x / 1000);
+            const Ds_m = Dmm.map(x => x / 1000);
+            const L = mean(Ls_m);
+            const D = mean(Ds_m);
+            const b = mean(bsMm.map(x => x / 1000));
+            const d = mean(dsMm.map(x => x / 1000));
+
+            const uLA = uATypeMean(Ls_m);
+            const uDA = uATypeMean(Ds_m);
+            const bM = bsMm.map(x => x / 1000);
+            const uBA = uATypeMean(bM);
+            const dM = dsMm.map(x => x / 1000);
+            const uDA_d = uATypeMean(dM);
+
+            const DL_mm = Number(document.getElementById('pDL').value);
+            const DD_mm = Number(document.getElementById('pDD').value);
+            const Db_mm = Number(document.getElementById('pDb').value);
+            const Dd_mm = Number(document.getElementById('pDd').value);
+            const Dn_cm = Number(document.getElementById('pDn').value);
+            if ([DL_mm, DD_mm, Db_mm, Dd_mm, Dn_cm].some(x => Number.isNaN(x))) throw new Error('B 类分度值含有非法数字。');
+
+            const uLB = uBRect(DL_mm / 1000);
+            const uDB = uBRect(DD_mm / 1000);
+            const uBb = uBRect(Db_mm / 1000);
+            const uBd = uBRect(Dd_mm / 1000);
+            const uBn_read_cm = uBRect(Dn_cm);
+
+            const uL = combineUAUB(uLA, uLB);
+            const uD = combineUAUB(uDA, uDB);
+            const ub = combineUAUB(uBA, uBb);
+            const ud = combineUAUB(uDA_d, uBd);
+
+            const pts = [];
+            procReadBody.querySelectorAll('tr').forEach(tr => {
+                const mv = parseFloat(tr.querySelector('.p-m').value);
+                const up = parseFloat(tr.querySelector('.p-up').value);
+                const dn = parseFloat(tr.querySelector('.p-dn').value);
+                if ([mv, up, dn].every(x => !Number.isNaN(x))) pts.push({ m: mv, up, dn, tr });
+            });
+            if (pts.length < 2) throw new Error('至少需要两行有效的 m、n增、n减。');
+
+            return {
+                L, D, d, b, Lmm, Dmm, Ls_m, Ds_m, bsMm, dsMm,
+                uL, uD, ub, ud,
+                uLA, uDA, uBA, uDA_d,
+                uBn_read_cm,
+                pts,
+            };
+        }
+
+        function stripHtml(s) {
+            return s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        }
+
+        function runCalc() {
+            let info;
+            try {
+                info = gatherValidated();
+            } catch (err) {
+                procResult.textContent = '输入错误：' + err.message;
+                window.__LAST_PROC_EXPORT__ = null;
+                return;
+            }
+
+            const { L, D, d, b, pts: ptsRaw, uL, uD, ub, ud, uBn_read_cm, Lmm, Dmm, bsMm, dsMm } = info;
+            const pts = ptsRaw.slice().sort((a, b) => a.m - b.m);
+            const lines = [];
+            lines.push('── 直接测量量（公式中 L、D、b、d 为 m；此处同步显示 mm）──');
+            lines.push('L̄ = ' + mean(Lmm).toFixed(1) + ' mm，u(L) = ' + (uL * 1000).toFixed(4) + ' mm');
+            lines.push('D̄ = ' + mean(Dmm).toFixed(1) + ' mm，u(D) = ' + (uD * 1000).toFixed(4) + ' mm');
+            lines.push('b̄ = ' + mean(bsMm).toFixed(1) + ' mm，u(b) = ' + (ub * 1000).toFixed(4) + ' mm');
+            lines.push('d̄ = ' + mean(dsMm).toFixed(3) + ' mm，u(d) = ' + (ud * 1000).toFixed(4) + ' mm');
+            lines.push('');
+
+            const nBars = [];
+            const seg = [];
+            for (let i = 0; i < pts.length; i++) {
+                const p = pts[i];
+                const nbar = (p.up + p.dn) / 2;
+                nBars.push(nbar);
+                p.tr.querySelector('.p-nbar').textContent = nbar.toFixed(2);
+            }
+            for (let i = 0; i < pts.length; i++) {
+                const tr = pts[i].tr;
+                tr.querySelector('.p-dnlt').textContent = '—';
+                tr.querySelector('.p-ei').textContent = '—';
+            }
+
+            for (let i = 0; i < pts.length - 1; i++) {
+                const dm = pts[i + 1].m - pts[i].m;
+                const dnmCm = nBars[i + 1] - nBars[i];
+                const dnm = dnmCm / 100;
+                if (dm <= 0 || dnm === 0) {
+                    lines.push('警告：第 ' + (i + 1) + ' 段 Δm≤0 或 Δn=0，已跳过。');
+                    continue;
+                }
+                if (Math.abs(dm - 1) > 1e-4) {
+                    lines.push('注意：第 ' + (i + 1) + ' 段 Δm=' + dm.toFixed(3) + ' kg（公式中 F 仍固定为 ' + F_FIXED + ' N）。');
+                }
+                const Ei = youngE(L, D, d, b, dnm);
+                seg.push({ i, dm, dnmCm, dnm, Ei });
+                pts[i + 1].tr.querySelector('.p-dnlt').textContent = dnmCm.toFixed(2);
+                pts[i + 1].tr.querySelector('.p-ei').textContent = Ei.toExponential(4);
+            }
+
+            const Es = seg.map(s => s.Ei);
+            if (!Es.length) {
+                procResult.textContent = lines.join('\n') + '\n无法计算 E：请检查质量递增与读数。';
+                window.__LAST_PROC_EXPORT__ = null;
+                return;
+            }
+
+            const rule = document.getElementById('pOutRule').value;
+            const grubLog = [];
+            const EsF = grubbsLoop(Es, rule, grubLog);
+            const Ebar = mean(EsF);
+
+            const dnM = seg.map(s => Math.abs(s.dnm));
+            const delN_mean_m = mean(dnM);
+            if (!isFinite(delN_mean_m) || delN_mean_m <= 0) {
+                procResult.textContent = lines.join('\n') + '\nΔn̄ 均值无效，无法计算相对不确定度。';
+                window.__LAST_PROC_EXPORT__ = null;
+                return;
+            }
+            const uSeg_m = uBn_read_cm / 100;
+            let uDelA_m = 0;
+            if (dnM.length >= 2) uDelA_m = stdSample(dnM) / Math.sqrt(dnM.length);
+            const uDelN_m = Math.sqrt(uDelA_m * uDelA_m + uSeg_m * uSeg_m);
+
+            const Er_raw = (uL / L) + (uD / D) + (ub / b) + (2 * ud / d) + (uDelN_m / delN_mean_m);
+            const Er_fin = ceilErOneSignificantDigit(Er_raw);
+            const deltaE = Math.abs(Ebar) * Er_fin;
+            const deltaEDisp = ceilErOneSignificantDigit(deltaE);
+
+            lines.push('── 各段 Δn（cm）与 Eᵢ（F = ' + F_FIXED + ' N）──');
+            seg.forEach((s, j) => {
+                lines.push('段' + (j + 1) + ': Δn̄=' + s.dnmCm.toFixed(2) + ' cm → E' + (j + 1) + '=' + s.Ei.toExponential(4) + ' Pa');
+            });
+            lines.push('');
+            if (grubLog.length) {
+                lines.push('── 粗大误差处理 ──');
+                grubLog.forEach(t => lines.push(t));
+                lines.push('剔除后参与平均的个数 k = ' + EsF.length);
+            } else lines.push('── 粗大误差：未触发剔除（或样本不足 3）──');
+            lines.push('');
+            lines.push('── 相对不确定度（求和后 E_r：1 位有效数字，只进不舍）──');
+            lines.push('E_r(计算值) = ' + formatErRawDisplay(Er_raw) + '，E_r(结果，1 位有效数字·只进不舍) = ' + formatErFinAsPercent(Er_fin) + '；ΔE = E_r·Ē');
+            const aSum = alignedEMantissas(Ebar, deltaEDisp);
+            if (aSum) {
+                lines.push('Ē = (' + aSum.sE + ') × 10^' + aSum.exp + ' N/㎡，ΔE = (' + aSum.sU + ') × 10^' + aSum.exp + ' N/㎡');
+            } else {
+                lines.push('Ē = —，ΔE = —');
+            }
+            lines.push('');
+
+            const htmlFinal = formatBoldEplusMinus(Ebar, deltaEDisp);
+            procResult.innerHTML =
+                lines.map(l => escapeHtml(l)).join('\n') +
+                '<div class="final-math">' + htmlFinal + '</div>';
+
+            window.__LAST_PROC_EXPORT__ = {
+                lines: lines.concat([stripHtml(htmlFinal)]),
+                csvTable: buildCsvTable(pts, nBars, seg, Es, EsF, Ebar, deltaE, Er_fin, grubLog, info),
+            };
+            saveLS();
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function buildCsvTable(pts, nBars, seg, EsOrig, EsF, Ebar, deltaE, Er_fin, grubLog, info) {
+            const rows = [['次数', 'm_kg', 'n增_cm', 'n减_cm', 'nbar_cm', 'Delta_n_cm', 'Ei_Pa']];
+            const dnByRow = {};
+            const eiByRow = {};
+            seg.forEach((s) => {
+                dnByRow[s.i + 1] = s.dnmCm;
+                eiByRow[s.i + 1] = s.Ei;
+            });
+            pts.forEach((p, idx) => {
+                rows.push([
+                    idx + 1,
+                    p.m,
+                    p.up,
+                    p.dn,
+                    nBars[idx].toFixed(4),
+                    dnByRow[idx] != null ? String(dnByRow[idx]) : '',
+                    eiByRow[idx] != null ? String(eiByRow[idx]) : '',
+                ]);
+            });
+            rows.push([]);
+            rows.push(['L_mean_mm', mean(info.Lmm)]);
+            rows.push(['D_mean_mm', mean(info.Dmm)]);
+            rows.push(['b_mean_mm', mean(info.bsMm)]);
+            rows.push(['d_mean_mm', mean(info.dsMm)]);
+            rows.push(['L_mean_m', info.L]);
+            rows.push(['D_mean_m', info.D]);
+            rows.push(['b_mean_m', info.b]);
+            rows.push(['d_mean_m', info.d]);
+            rows.push(['E_mean_Pa', Ebar]);
+            rows.push(['deltaE_Pa', deltaE]);
+            rows.push(['Er_1sig_ceil', Er_fin]);
+            rows.push(['outlier_log', grubLog.join('; ')]);
+            return rows;
+        }
+
+        function downloadText(filename, text, mime) {
+            const blob = new Blob(['\uFEFF' + text], { type: mime || 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        document.getElementById('procCalc').addEventListener('click', runCalc);
+
+        document.getElementById('procExportCsv').addEventListener('click', () => {
+            if (!window.__LAST_PROC_EXPORT__) {
+                alert('请先填写完整数据并等待自动计算成功，或点击「计算」后再导出。');
+                return;
+            }
+            const t = new Date();
+            const stamp = t.getFullYear() +
+                String(t.getMonth() + 1).padStart(2, '0') +
+                String(t.getDate()).padStart(2, '0') + '_' +
+                String(t.getHours()).padStart(2, '0') +
+                String(t.getMinutes()).padStart(2, '0') +
+                String(t.getSeconds()).padStart(2, '0');
+            const csv = window.__LAST_PROC_EXPORT__.csvTable.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+            downloadText('杨氏模量数据_' + stamp + '.csv', csv, 'text/csv;charset=utf-8');
+        });
+
+        document.getElementById('procExportTxt').addEventListener('click', () => {
+            if (!window.__LAST_PROC_EXPORT__) {
+                alert('请先填写完整数据并等待自动计算成功，或点击「计算」后再导出。');
+                return;
+            }
+            const t = new Date();
+            const stamp = t.getFullYear() +
+                String(t.getMonth() + 1).padStart(2, '0') +
+                String(t.getDate()).padStart(2, '0') + '_' +
+                String(t.getHours()).padStart(2, '0') +
+                String(t.getMinutes()).padStart(2, '0') +
+                String(t.getSeconds()).padStart(2, '0');
+            downloadText('杨氏模量数据_' + stamp + '.txt', window.__LAST_PROC_EXPORT__.lines.join('\r\n'), 'text/plain;charset=utf-8');
+        });
+
+        const procPanelEl = document.getElementById('procPanel');
+        function onProcFieldChange() {
+            saveLS();
+            runCalc();
+        }
+        procPanelEl.addEventListener('input', onProcFieldChange);
+        procPanelEl.addEventListener('change', onProcFieldChange);
+
+        loadLS();
+        runCalc();
+    })();
+    </script>
+</body>
+</html>
